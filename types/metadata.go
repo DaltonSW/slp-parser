@@ -1,6 +1,8 @@
 package types
 
 type Metadata struct {
+	Bytes []byte
+
 	// StartAt: ISO 8601 formatted string representing the timestamp that the game started at
 	StartAt string
 
@@ -25,8 +27,8 @@ type PlayerMetadata struct {
 	Names map[string]string
 }
 
-func LoadMetadata(payload []byte) Metadata {
-	meta := Metadata{}
+func LoadMetadata(stream []byte) Metadata {
+	meta := Metadata{Bytes: stream}
 
 	return meta
 }

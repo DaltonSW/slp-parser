@@ -3,6 +3,7 @@ package types
 import "go.dalton.dog/slp/events"
 
 type Raw struct {
+	Bytes  []byte
 	Events []events.Event
 }
 
@@ -11,7 +12,7 @@ func (r Raw) AddEvent(newEvent events.Event) {
 }
 
 func LoadRaw(stream []byte) Raw {
-	raw := Raw{}
+	raw := Raw{Bytes: stream}
 
 	// Loop until stream is empty
 	//	Grab the command byte
