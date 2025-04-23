@@ -1,14 +1,15 @@
 package main
 
 import (
-	"log"
+	"github.com/charmbracelet/log"
 	// "os"
 	"path/filepath"
 
-	"go.dalton.dog/slp/types"
+	"go.dalton.dog/slp/file"
 )
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	// samples, err := os.ReadDir("samples")
 	// if err != nil {
 	// 	log.Fatalf("Unable to read dir 'samples': %v", err)
@@ -18,7 +19,7 @@ func main() {
 	// 	loadEntry(entry.Name())
 	// }
 	loadEntry("Slippi_1.slp")
-	loadEntry("Genesis_1.slp")
+	// loadEntry("Genesis_1.slp")
 }
 
 func loadEntry(filename string) {
@@ -28,12 +29,12 @@ func loadEntry(filename string) {
 
 	path := filepath.Join("samples", filename)
 
-	file, err := types.LoadFile(path)
+	file, err := file.LoadFile(path)
 	if err != nil {
-		log.Printf("Error processing file %v: %v", filename, err)
+		log.Error("Error processing file", "file", filename, "err", err)
 		return
 	}
 
 	// log.Printf("Success! Raw len: %v -- Metadata len: %v", len(file.Raw.Bytes), len(file.Metadata.Bytes))
-	log.Printf("File %v\n%v", file.Filepath, file.Metadata)
+	log.Printf("File %v\n%v\n%v", file.Filepath, file.Metadata, file.Raw)
 }
