@@ -1,8 +1,12 @@
 package events
 
+import "fmt"
+
 // GameStart indicates that a game is starting, and contains the information necessary for initialization.
 // Will ALWAYS occur once, and ALWAYS right after the Event Payloads event
 type GameStart struct {
+	Payload []byte
+
 	ExtractCodeVersion Version
 	GameInfo           GameInfoBlock // Docs say this will always be [312]uint8
 	RandomSeed         uint32
@@ -26,8 +30,16 @@ type GameStart struct {
 	Tiebreaker uint32 // For the given GameNumber, will be 0 if NOT a tiebreaker game
 }
 
+func (s GameStart) GetByte() byte {
+	return GameStartByte
+}
+
+func (s GameStart) String() string {
+	return fmt.Sprintf("Game Start: %v", s.Payload)
+}
+
 func ParseGameStart(payload []byte) GameStart {
-	outEvent := GameStart{}
+	outEvent := GameStart{Payload: payload}
 
 	return outEvent
 }
