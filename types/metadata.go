@@ -1,10 +1,10 @@
 package types
 
 import (
-	"bytes"
+	// "bytes"
 	"fmt"
-	"log"
-	"strconv"
+	// "log"
+	// "strconv"
 
 	"github.com/jmank88/ubjson"
 )
@@ -21,7 +21,7 @@ type Metadata struct {
 	LastFrame int32 `ubjson:"lastFrame"`
 
 	// Players: Metadata for each player in the game
-	Players [4]PlayerMetadata `ubjson:"players"`
+	Players map[string]PlayerMetadata `ubjson:"players"`
 
 	// PlayedOn: Platform that the game was played on
 	PlayedOn string `ubjson:"playedOn"`
@@ -36,18 +36,19 @@ func (m Metadata) String() string {
 	out = out + fmt.Sprintf("Last Frame   : %v\n", m.LastFrame)
 	out = out + fmt.Sprintf("Played On    : %v\n", m.PlayedOn)
 	out = out + fmt.Sprintf("Console Nick : %v\n", m.ConsoleNick)
-	out = out + "Slots:\n"
-	out = out + fmt.Sprintf("  Port 1: %v\n", m.Players[0])
-	out = out + fmt.Sprintf("  Port 2: %v\n", m.Players[1])
-	out = out + fmt.Sprintf("  Port 3: %v\n", m.Players[2])
-	out = out + fmt.Sprintf("  Port 4: %v\n", m.Players[3])
+	out = out + fmt.Sprintf("Players      : %v\n", m.Players)
+	// out = out + "Slots:\n"
+	// out = out + fmt.Sprintf("  Port 1: %v\n", m.Players[0])
+	// out = out + fmt.Sprintf("  Port 2: %v\n", m.Players[1])
+	// out = out + fmt.Sprintf("  Port 3: %v\n", m.Players[2])
+	// out = out + fmt.Sprintf("  Port 4: %v\n", m.Players[3])
 
 	return out
 }
 
 type PlayerMetadata struct {
 	// Characters: Number of frames spent as each character. Generally only useful for Zelda/Sheik, methinks
-	Characters []PlayerCharacter `ubjson:"characters"`
+	Characters map[string]int32 `ubjson:"characters"`
 
 	// Names: Contains the display name of the player, as well as the connect code if applicable
 	Names PlayerNames `ubjson:"names"`
@@ -86,60 +87,57 @@ func (pn PlayerNames) String() string {
 }
 
 func LoadMetadata(stream []byte) (*Metadata, error) {
-	// meta := &Metadata{Bytes: stream}
-	meta := &Metadata{
-		Players: [4]PlayerMetadata{},
-	}
+	meta := &Metadata{}
 
-	decoder := ubjson.NewDecoder(bytes.NewReader(stream))
-	var rawMap map[string]any
-	if err := decoder.Decode(&rawMap); err != nil {
+	if err := ubjson.Unmarshal(stream, meta); err != nil {
 		return nil, err
 	}
 
-	meta.StartAt = rawMap["startAt"].(string)
-	meta.LastFrame = rawMap["lastFrame"].(int32)
-	meta.PlayedOn = rawMap["playedOn"].(string)
-
-	if rawMap["consoleNick"] != nil {
-		meta.ConsoleNick = rawMap["consoleNick"].(string)
-	}
-
-	rawPlayers := rawMap["players"].(map[string]any)
-
-	for slot, playerData := range rawPlayers {
-		slotInt, err := strconv.Atoi(slot)
-		if err != nil {
-			log.Default().Printf("Invalid slot index")
-			continue
-		}
-
-		player := PlayerMetadata{
-			Characters: make([]PlayerCharacter, 0),
-		}
-		playerMap := playerData.(map[string]any)
-
-		characterMap := playerMap["characters"].(map[string]any)
-
-		for id, frames := range characterMap {
-			pc := PlayerCharacter{}
-
-			pc.CharacterID = id
-			pc.NumFrames = frames.(int32)
-
-			player.Characters = append(player.Characters, pc)
-		}
-
-		nameMap := playerMap["names"].(map[string]any)
-		player.Names.Code = nameMap["code"].(string)
-		player.Names.Netplay = nameMap["netplay"].(string)
-
-		// if nameMap["code"] != nil {
-		// 	player.Names.Code = nameMap["code"]
-		// }
-
-		meta.Players[slotInt] = player
-	}
-
 	return meta, nil
+
+	// meta.StartAt = rawMap["startAt"].(string)
+	// meta.LastFrame = rawMap["lastFrame"].(int32)
+	// meta.PlayedOn = rawMap["playedOn"].(string)
+	//
+	// if rawMap["consoleNick"] != nil {
+	// 	meta.ConsoleNick = rawMap["consoleNick"].(string)
+	// }
+	//
+	// rawPlayers := rawMap["players"].(map[string]any)
+	//
+	// for _, playerData := range rawPlayers {
+	// 	// slotInt, err := strconv.Atoi(slot)
+	// 	// if err != nil {
+	// 	// 	log.Default().Printf("Invalid slot index")
+	// 	// 	continue
+	// 	// }
+	//
+	// 	player := PlayerMetadata{
+	// 		// Characters: make(map[string]PlayerCharacter),
+	// 	}
+	// 	playerMap := playerData.(map[string]any)
+	//
+	// 	characterMap := playerMap["characters"].(map[string]any)
+	//
+	// 	for id, frames := range characterMap {
+	// 		pc := PlayerCharacter{}
+	//
+	// 		pc.CharacterID = id
+	// 		pc.NumFrames = frames.(int32)
+	//
+	// 		// player.Characters = append(player.Characters, pc)
+	// 	}
+	//
+	// 	nameMap := playerMap["names"].(map[string]any)
+	// 	player.Names.Code = nameMap["code"].(string)
+	// 	player.Names.Netplay = nameMap["netplay"].(string)
+	//
+	// 	// if nameMap["code"] != nil {
+	// 	// 	player.Names.Code = nameMap["code"]
+	// 	// }
+	//
+	// 	// meta.Players[slotInt] = player
+	// }
+	//
+	// return meta, nil
 }
