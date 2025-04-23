@@ -11,8 +11,8 @@ import (
 
 type File struct {
 	Filepath string
-	Raw      Raw
-	Metadata Metadata
+	Raw      *Raw
+	Metadata *Metadata
 }
 
 func LoadFile(filepath string) (*File, error) {
@@ -35,14 +35,20 @@ func LoadFile(filepath string) (*File, error) {
 		return nil, errors.New("Loaded file was empty")
 	}
 
-	rawBytes, metadataBytes, err := splitFileBytes(fileData)
+	// rawBytes, metadataBytes, err := splitFileBytes(fileData)
+	_, metadataBytes, err := splitFileBytes(fileData)
 
 	if err != nil {
 		return nil, err
 	}
 
-	file.Raw = LoadRaw(rawBytes)
-	file.Metadata = LoadMetadata(metadataBytes)
+	// raw, err := LoadRaw(rawBytes)
+	// file.Raw = LoadRaw(rawBytes)
+	metadata, err := LoadMetadata(metadataBytes)
+	if err != nil {
+		return nil, err
+	}
+	file.Metadata = metadata
 
 	return file, nil
 }
