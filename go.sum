@@ -1,0 +1,4 @@
+github.com/jmank88/ubjson v1.3.1 h1:5PJZ7Mi9m5aNseba2nEQ3I8ry4Y95pV/tqS/7SBzzBo=
+github.com/jmank88/ubjson v1.3.1/go.mod h1:ciX98zv7LHiM1tGKLOiXvrm5DI/N3tlV01bMnDvY8sE=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
