@@ -1,7 +1,24 @@
 module go.dalton.dog/slp
 
-go 1.22.5
+go 1.24.1
 
-require github.com/jmank88/ubjson v1.3.1
+require (
+	github.com/hashicorp/go-version v1.7.0
+	github.com/jmank88/ubjson v1.3.1
+	go.dalton.dog/bark v1.0.3
+)
 
-require github.com/pkg/errors v0.8.1 // indirect
+require (
+	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/charmbracelet/lipgloss v1.0.0 // indirect
+	github.com/charmbracelet/log v0.4.1 // indirect
+	github.com/charmbracelet/x/ansi v0.4.2 // indirect
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/muesli/termenv v0.16.0 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/sys v0.30.0 // indirect
+)

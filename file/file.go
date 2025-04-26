@@ -1,4 +1,4 @@
-package types
+package file
 
 import (
 	"encoding/binary"
@@ -35,15 +35,18 @@ func LoadFile(filepath string) (*File, error) {
 		return nil, errors.New("Loaded file was empty")
 	}
 
-	// rawBytes, metadataBytes, err := splitFileBytes(fileData)
-	_, metadataBytes, err := splitFileBytes(fileData)
+	rawBytes, metadataBytes, err := splitFileBytes(fileData)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// raw, err := LoadRaw(rawBytes)
-	// file.Raw = LoadRaw(rawBytes)
+	raw, err := LoadRaw(rawBytes)
+	if err != nil {
+		return nil, err
+	}
+	file.Raw = raw
+
 	metadata, err := LoadMetadata(metadataBytes)
 	if err != nil {
 		return nil, err

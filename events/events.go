@@ -1,5 +1,11 @@
 package events
 
+import (
+	"fmt"
+
+	"github.com/hashicorp/go-version"
+)
+
 // Command Bytes
 const (
 	EventPayloadsByte     = 0x35
@@ -18,49 +24,58 @@ const (
 )
 
 type Event interface {
+	GetByte() byte
+	String() string
 }
 
-type EventPayloads struct {
-	Payload []byte
-	Length  uint8
-}
-
-func ParseEventPayloads(stream []byte) EventPayloads {
-	return EventPayloads{}
-
+type EventRaw interface {
+	GetCommandByte() byte
+	GetEventName() string
 }
 
 // ParseNextEvent will pass the given payload off to the appropriate event parser based on given commandByte
-func ParseNextEvent(commandByte byte, payload []byte) Event {
+// func ParseNextEventRaw(commandByte byte, payload []byte) (*EventRaw, error) {
+func ParseNextEventRaw(payload []byte, version *version.Version) (EventRaw, error) {
+	var outEvent EventRaw
+
+	commandByte := payload[0]
 
 	switch commandByte {
 	case EventPayloadsByte:
-		return ParseEventPayloads(payload)
+		return nil, nil
 	case GameStartByte:
-		return ParseGameStart(payload)
+		outEvent = &GameStartRaw{}
 	case PreFrameUpdateByte:
-		return ParsePreFrameUpdate(payload)
+		outEvent = &PreFrameRaw{}
 	case PostFrameUpdateByte:
-		return ParsePostFrameUpdate(payload)
+		outEvent = &PostFrameRaw{}
 	case GameEndByte:
-		return ParseGameEnd(payload)
+		outEvent = &GameEndRaw{}
 	case FrameStartByte:
-		return ParseFrameStart(payload)
+		outEvent = &FrameStartRaw{}
 	case ItemUpdateByte:
-		return ParseItemUpdate(payload)
+		outEvent = &ItemUpdateRaw{}
 	case FrameBookendByte:
-		return ParseFrameBookend(payload)
+		outEvent = &FrameBookendRaw{}
 	case GeckoListByte:
-		return ParseGeckoList(payload)
+		outEvent = &GeckoListRaw{}
 	case FountainPlatformsByte:
-		return ParseFountainPlatform(payload)
+		outEvent = &FountainPlatformRaw{}
 	case WhispyBlowDirByte:
-		return ParseWhispyBlowDir(payload)
+		outEvent = &WhispyBlowDirectionRaw{}
 	case StadiumTransformByte:
-		return ParseStadiumTransform(payload)
+		outEvent = &PokemonTransformRaw{}
 	case MessageSplitterByte:
-		return ParseMessageSplitter(payload)
+		outEvent = &MessageSplitRaw{}
 	default:
-		return nil
+		return nil, fmt.Errorf("Tried to parse event with unsupported cmdByte: %b", commandByte)
 	}
+
+	err := UnpackRawEvent(outEvent, payload, version)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return outEvent, nil
 }

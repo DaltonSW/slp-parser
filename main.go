@@ -1,14 +1,15 @@
 package main
 
 import (
-	"log"
-	// "os"
 	"path/filepath"
 
-	"go.dalton.dog/slp/types"
+	"go.dalton.dog/bark"
+	"go.dalton.dog/slp/file"
 )
 
 func main() {
+	bark.Init(bark.BarkOptions{})
+	bark.SetDebugLevel(true)
 	// samples, err := os.ReadDir("samples")
 	// if err != nil {
 	// 	log.Fatalf("Unable to read dir 'samples': %v", err)
@@ -28,12 +29,12 @@ func loadEntry(filename string) {
 
 	path := filepath.Join("samples", filename)
 
-	file, err := types.LoadFile(path)
+	file, err := file.LoadFile(path)
 	if err != nil {
-		log.Printf("Error processing file %v: %v", filename, err)
+		bark.Errorf("Error processing file (%v): %v", filename, err)
 		return
 	}
 
 	// log.Printf("Success! Raw len: %v -- Metadata len: %v", len(file.Raw.Bytes), len(file.Metadata.Bytes))
-	log.Printf("File %v\n%v", file.Filepath, file.Metadata)
+	bark.Infof("File %v\n%v\n%v", file.Filepath, file.Metadata, file.Raw)
 }
