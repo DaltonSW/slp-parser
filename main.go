@@ -5,10 +5,13 @@ import (
 	// "os"
 	"path/filepath"
 
+	"go.dalton.dog/bark"
 	"go.dalton.dog/slp/file"
 )
 
 func main() {
+	bark.Init(bark.BarkOptions{})
+	bark.SetDebugLevel(false)
 	log.SetLevel(log.DebugLevel)
 	// samples, err := os.ReadDir("samples")
 	// if err != nil {
@@ -19,7 +22,7 @@ func main() {
 	// 	loadEntry(entry.Name())
 	// }
 	loadEntry("Slippi_1.slp")
-	// loadEntry("Genesis_1.slp")
+	loadEntry("Genesis_1.slp")
 }
 
 func loadEntry(filename string) {

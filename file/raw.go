@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/charmbracelet/log"
-
+	"go.dalton.dog/bark"
 	"go.dalton.dog/slp/events"
 )
 
@@ -32,6 +31,7 @@ func (r Raw) AddEvent(newEvent events.EventRaw) {
 }
 
 func LoadRaw(stream []byte) (*Raw, error) {
+	bark.Debug(fmt.Sprintf("Starting to load raw bytes. Stream length: %v", len(stream)))
 	raw := &Raw{Bytes: stream}
 
 	offset := 0
@@ -44,7 +44,7 @@ func LoadRaw(stream []byte) (*Raw, error) {
 	numCmds := (payloadSize - 1) / 3
 	raw.EventPayloads = events.ParseEventPayloads(stream[offset+1:offset+payloadSize], numCmds)
 
-	log.Debugf("Event Payloads Parsed: %v", raw.EventPayloads)
+	bark.Debug(fmt.Sprintf("Event Payloads Parsed: %v", raw.EventPayloads))
 
 	stream = stream[offset+payloadSize:]
 
@@ -55,11 +55,17 @@ func LoadRaw(stream []byte) (*Raw, error) {
 			return nil, err
 		}
 
+		bark.Info(fmt.Sprintf("Loaded payload size of %v for cmdByte %X", payloadSize, cmdByte))
+
 		payload := stream[:payloadSize+1]
 		stream = stream[payloadSize+1:]
 
 		event, err := events.ParseNextEventRaw(payload)
+		if err != nil {
+			return nil, err
+		}
 		if event != nil {
+			bark.Info("Appending to raw.Events")
 			raw.Events = append(raw.Events, event)
 		}
 	}

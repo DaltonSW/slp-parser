@@ -7,9 +7,8 @@ import (
 	// "strconv"
 
 	"github.com/jmank88/ubjson"
+	"go.dalton.dog/bark"
 )
-
-// HACK: Try and figure out how to make this decode / unmarshal in a proper way before moving on to `raw`
 
 type Metadata struct {
 	// Bytes []byte
@@ -87,6 +86,7 @@ func (pn PlayerNames) String() string {
 }
 
 func LoadMetadata(stream []byte) (*Metadata, error) {
+	bark.Debug("Starting to load metadata bytes")
 	meta := &Metadata{}
 
 	if err := ubjson.Unmarshal(stream, meta); err != nil {
@@ -94,50 +94,4 @@ func LoadMetadata(stream []byte) (*Metadata, error) {
 	}
 
 	return meta, nil
-
-	// meta.StartAt = rawMap["startAt"].(string)
-	// meta.LastFrame = rawMap["lastFrame"].(int32)
-	// meta.PlayedOn = rawMap["playedOn"].(string)
-	//
-	// if rawMap["consoleNick"] != nil {
-	// 	meta.ConsoleNick = rawMap["consoleNick"].(string)
-	// }
-	//
-	// rawPlayers := rawMap["players"].(map[string]any)
-	//
-	// for _, playerData := range rawPlayers {
-	// 	// slotInt, err := strconv.Atoi(slot)
-	// 	// if err != nil {
-	// 	// 	log.Default().Printf("Invalid slot index")
-	// 	// 	continue
-	// 	// }
-	//
-	// 	player := PlayerMetadata{
-	// 		// Characters: make(map[string]PlayerCharacter),
-	// 	}
-	// 	playerMap := playerData.(map[string]any)
-	//
-	// 	characterMap := playerMap["characters"].(map[string]any)
-	//
-	// 	for id, frames := range characterMap {
-	// 		pc := PlayerCharacter{}
-	//
-	// 		pc.CharacterID = id
-	// 		pc.NumFrames = frames.(int32)
-	//
-	// 		// player.Characters = append(player.Characters, pc)
-	// 	}
-	//
-	// 	nameMap := playerMap["names"].(map[string]any)
-	// 	player.Names.Code = nameMap["code"].(string)
-	// 	player.Names.Netplay = nameMap["netplay"].(string)
-	//
-	// 	// if nameMap["code"] != nil {
-	// 	// 	player.Names.Code = nameMap["code"]
-	// 	// }
-	//
-	// 	// meta.Players[slotInt] = player
-	// }
-	//
-	// return meta, nil
 }

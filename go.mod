@@ -1,10 +1,11 @@
 module go.dalton.dog/slp
 
-go 1.22.5
+go 1.24.1
 
 require (
 	github.com/charmbracelet/log v0.4.1
 	github.com/jmank88/ubjson v1.3.1
+	go.dalton.dog/bark v1.0.1
 )
 
 require (

@@ -28,7 +28,7 @@ func UnpackRawEvent(raw EventRaw, payload []byte) error {
 
 		offsetHex := field.Tag.Get("slp-offset")
 		if offsetHex == "" {
-			continue
+			return fmt.Errorf("Found field without slp-offset tag: %v", field)
 		}
 
 		var offset int

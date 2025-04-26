@@ -3,7 +3,6 @@ package events
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/charmbracelet/log"
 )
 
 // Event:     Event Payloads
@@ -30,7 +29,7 @@ func (p EventPayloads) String() string {
 }
 
 func (p EventPayloads) GetPayloadLength(cmdByte byte) (uint16, error) {
-	log.Debugf("Getting payload length for byte %X", cmdByte)
+	// log.Debugf("Getting payload length for byte %X", cmdByte)
 	val, ok := p.Mappings[cmdByte]
 	if !ok {
 		return 0, fmt.Errorf("Length requested for byte that wasn't present in initial Event Payloads: %v", cmdByte)
@@ -39,7 +38,7 @@ func (p EventPayloads) GetPayloadLength(cmdByte byte) (uint16, error) {
 }
 
 func ParseEventPayloads(stream []byte, numCmds int) EventPayloads {
-	log.Debugf("Trying to parse event payloads.\nNum Cmds: %v\nStream: %v\n", numCmds, stream)
+	// log.Debugf("Trying to parse event payloads.\nNum Cmds: %v\nStream: %v\n", numCmds, stream)
 	out := EventPayloads{Mappings: make(map[byte]uint16), Payload: stream}
 	if len(stream) < 1 {
 		return out

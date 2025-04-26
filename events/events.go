@@ -1,5 +1,7 @@
 package events
 
+import "fmt"
+
 // Command Bytes
 const (
 	EventPayloadsByte     = 0x35
@@ -30,41 +32,39 @@ type EventRaw interface {
 // ParseNextEvent will pass the given payload off to the appropriate event parser based on given commandByte
 // func ParseNextEventRaw(commandByte byte, payload []byte) (*EventRaw, error) {
 func ParseNextEventRaw(payload []byte) (EventRaw, error) {
-
 	var outEvent EventRaw
 
 	commandByte := payload[0]
 
 	switch commandByte {
-	// case EventPayloadsByte:
-	// 	outEvent = &EventPayloads
-	// 	return ParseEventPayloads(payload)
-	case GameStartByte:
-		outEvent = GameStartRaw{}
-	case PreFrameUpdateByte:
-		outEvent = PreFrameRaw{}
-	case PostFrameUpdateByte:
-		outEvent = PostFrameRaw{}
-	case GameEndByte:
-		outEvent = GameEndRaw{}
-	case FrameStartByte:
-		outEvent = FrameStartRaw{}
-	case ItemUpdateByte:
-		outEvent = ItemUpdateRaw{}
-	case FrameBookendByte:
-		outEvent = FrameBookendRaw{}
-	case GeckoListByte:
-		outEvent = GeckoListRaw{}
-	case FountainPlatformsByte:
-		outEvent = FountainPlatformRaw{}
-	case WhispyBlowDirByte:
-		outEvent = WhispyBlowDirectionRaw{}
-	case StadiumTransformByte:
-		outEvent = PokemonTransformRaw{}
-	case MessageSplitterByte:
-		outEvent = MessageSplitRaw{}
-	default:
+	case EventPayloadsByte:
 		return nil, nil
+	case GameStartByte:
+		outEvent = &GameStartRaw{}
+	case PreFrameUpdateByte:
+		outEvent = &PreFrameRaw{}
+	case PostFrameUpdateByte:
+		outEvent = &PostFrameRaw{}
+	case GameEndByte:
+		outEvent = &GameEndRaw{}
+	case FrameStartByte:
+		outEvent = &FrameStartRaw{}
+	case ItemUpdateByte:
+		outEvent = &ItemUpdateRaw{}
+	case FrameBookendByte:
+		outEvent = &FrameBookendRaw{}
+	case GeckoListByte:
+		outEvent = &GeckoListRaw{}
+	case FountainPlatformsByte:
+		outEvent = &FountainPlatformRaw{}
+	case WhispyBlowDirByte:
+		outEvent = &WhispyBlowDirectionRaw{}
+	case StadiumTransformByte:
+		outEvent = &PokemonTransformRaw{}
+	case MessageSplitterByte:
+		outEvent = &MessageSplitRaw{}
+	default:
+		return nil, fmt.Errorf("Tried to parse event with unsupported cmdByte: %b", commandByte)
 	}
 
 	err := UnpackRawEvent(outEvent, payload)
