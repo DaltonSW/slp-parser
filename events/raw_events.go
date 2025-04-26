@@ -1,5 +1,64 @@
 package events
 
+import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"reflect"
+)
+
+func UnpackRawEvent(raw EventRaw, payload []byte) error {
+	// Verify that the payload's first byte matches the given event's Command Byte
+	cmdByte := payload[0]
+	if cmdByte != raw.GetCommandByte() {
+		return errors.New("Mismatched command byte")
+	}
+
+	rawVal := reflect.ValueOf(raw)
+	if rawVal.Kind() != reflect.Pointer || rawVal.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("Expected pointer to EventRaw implementing struct, got %T instead", raw)
+	}
+
+	structVal := rawVal.Elem()
+	structType := structVal.Type()
+
+	for i := range structType.NumField() {
+		field := structType.Field(i)
+
+		offsetHex := field.Tag.Get("slp-offset")
+		if offsetHex == "" {
+			continue
+		}
+
+		var offset int
+		_, err := fmt.Sscanf(offsetHex, "0x%x", &offset)
+		if err != nil {
+			return fmt.Errorf("Invalid offset tag attempted to parse")
+		}
+
+		value := structVal.Field(i)
+		size := binary.Size(value.Interface())
+		if size < 0 {
+			return fmt.Errorf("Unsupported size for field %s", field.Name)
+		}
+
+		if offset+size > len(payload) {
+			return fmt.Errorf("Payload too short for field %s with offset 0x%x", field.Name, offset)
+		}
+
+		fieldBytes := payload[offset : offset+size]
+		reader := bytes.NewReader(fieldBytes)
+
+		if err := binary.Read(reader, binary.BigEndian, value.Addr().Interface()); err != nil {
+			return fmt.Errorf("Binary read failed for field %s: %v", field.Name, err)
+		}
+
+	}
+
+	return nil
+}
+
 // GameStartRaw (0x36 -- v0.1.0)
 type GameStartRaw struct {
 	CmdByte       uint8     `slp-offset:"0x00" slp-ver:"0.1.0"`
@@ -7,17 +66,45 @@ type GameStartRaw struct {
 	GameInfoBlock [312]byte `slp-offset:"0x05" slp-ver:"0.1.0"`
 	RandomSeed    uint32    `slp-offset:"0x13D" slp-ver:"0.1.0"`
 
-	// Ports [4]PortMetadataRaw
+	PortOneDashback     uint32 `slp-offset:"0x141" slp-ver:"1.0.0"`
+	PortOneShieldDrop   uint32 `slp-offset:"0x145" slp-ver:"1.0.0"`
+	PortTwoDashback     uint32 `slp-offset:"0x149" slp-ver:"1.0.0"`
+	PortTwoShieldDrop   uint32 `slp-offset:"0x14D" slp-ver:"1.0.0"`
+	PortThreeDashback   uint32 `slp-offset:"0x151" slp-ver:"1.0.0"`
+	PortThreeShieldDrop uint32 `slp-offset:"0x155" slp-ver:"1.0.0"`
+	PortFourDashback    uint32 `slp-offset:"0x159" slp-ver:"1.0.0"`
+	PortFourShieldDrop  uint32 `slp-offset:"0x15D" slp-ver:"1.0.0"`
 
-	IsPAL          bool     `slp-offset:"0x1A1" slp-ver:"1.5.0"`
-	FrozenPS       bool     `slp-offset:"0x1A2" slp-ver:"2.0.0"`
-	MinorScene     uint8    `slp-offset:"0x1A3" slp-ver:"3.7.0"`
-	MajorScene     uint8    `slp-offset:"0x1A4" slp-ver:"3.7.0"`
+	PortOneNametag   [16]byte `slp-offset:"0x161" slp-ver:"1.3.0"`
+	PortTwoNametag   [16]byte `slp-offset:"0x171" slp-ver:"1.3.0"`
+	PortThreeNametag [16]byte `slp-offset:"0x181" slp-ver:"1.3.0"`
+	PortFourNametag  [16]byte `slp-offset:"0x191" slp-ver:"1.3.0"`
+
+	IsPAL      bool  `slp-offset:"0x1A1" slp-ver:"1.5.0"`
+	FrozenPS   bool  `slp-offset:"0x1A2" slp-ver:"2.0.0"`
+	MinorScene uint8 `slp-offset:"0x1A3" slp-ver:"3.7.0"`
+	MajorScene uint8 `slp-offset:"0x1A4" slp-ver:"3.7.0"`
+
+	// Next chunk of port-specific stuff
+	// Display Name
+	//	(Shift JIS string @ 0x1A5+0x1F*i)
+	//	"Max 15 chars + null terminator"
+	// Connect Code
+	//	(Shift JIS string @ 0x221+0xA*i)
+	//	"Max 7 1-byte chars + 2-byte '#' + null terminator"
+	// Slippi UID
+	//	(string @ 0x249+0x1D*i)
+	//	"Max 28 chars + null terminator"
+
 	LanguageOption uint8    `slp-offset:"0x2BD" slp-ver:"3.12.0"`
 	MatchID        [51]byte `slp-offset:"0x2BE" slp-ver:"3.14.0"`
 	GameNumber     uint32   `slp-offset:"0x2F1" slp-ver:"3.14.0"`
 	TiebreakerNum  uint32   `slp-offset:"0x2F5" slp-ver:"3.14.0"`
 }
+
+func (GameStartRaw) GetCommandByte() byte { return GameStartByte }
+
+func (GameStartRaw) GetEventName() string { return "Game Start" }
 
 // PreFrameRaw (0x37 -- v0.1.0)
 type PreFrameRaw struct {
@@ -45,6 +132,10 @@ type PreFrameRaw struct {
 	RawCStickX       int8    `slp-offset:"0x41" slp-ver:"3.17.0"`
 	RawCStickY       int8    `slp-offset:"0x42" slp-ver:"3.17.0"`
 }
+
+func (PreFrameRaw) GetCommandByte() byte { return PreFrameUpdateByte }
+
+func (PreFrameRaw) GetEventName() string { return "Pre-Frame" }
 
 // PostFrameRaw (0x38 -- v0.1.0)
 type PostFrameRaw struct {
@@ -86,6 +177,10 @@ type PostFrameRaw struct {
 	InstanceID              uint16  `slp-offset:"0x53" slp-ver:"3.16.0"`
 }
 
+func (PostFrameRaw) GetCommandByte() byte { return PostFrameUpdateByte }
+
+func (PostFrameRaw) GetEventName() string { return "Post-Frame" }
+
 // GameEndRaw (0x39 -- v0.1.0)
 type GameEndRaw struct {
 	CmdByte          uint8   `slp-offset:"0x00" slp-ver:"0.1.0"`
@@ -93,6 +188,10 @@ type GameEndRaw struct {
 	LRASInitiator    int8    `slp-offset:"0x02" slp-ver:"2.0.0"`
 	PlayerPlacements [4]int8 `slp-offset:"0x03" slp-ver:"3.13.0"`
 }
+
+func (GameEndRaw) GetCommandByte() byte { return GameEndByte }
+
+func (GameEndRaw) GetEventName() string { return "Game End" }
 
 // FrameStartRaw (0x3A -- v2.2.0)
 type FrameStartRaw struct {
@@ -102,12 +201,9 @@ type FrameStartRaw struct {
 	SceneFrameCounter uint32 `slp-offset:"0x09" slp-ver:"3.10.0"`
 }
 
-// FrameBookendRaw (0x3C -- v3.0.0)
-type FrameBookendRaw struct {
-	CmdByte     uint8  `slp-offset:"0x00" slp-ver:"0.1.0"`
-	FrameNumber int32  `slp-offset:"0x01" slp-ver:"0.1.0"`
-	Seed        uint32 `slp-offset:"0x05" slp-ver:"0.1.0"`
-}
+func (FrameStartRaw) GetCommandByte() byte { return FrameStartByte }
+
+func (FrameStartRaw) GetEventName() string { return "Frame Start" }
 
 // ItemUpdateRaw (0x3B -- v3.0.0)
 type ItemUpdateRaw struct {
@@ -129,4 +225,76 @@ type ItemUpdateRaw struct {
 	Misc4           uint8   `slp-offset:"0x29" slp-ver:"3.2.0"`
 	Owner           int8    `slp-offset:"0x2A" slp-ver:"3.6.0"`
 	InstanceID      uint16  `slp-offset:"0x2B" slp-ver:"3.16.0"`
+}
+
+func (ItemUpdateRaw) GetCommandByte() byte { return ItemUpdateByte }
+
+func (ItemUpdateRaw) GetEventName() string { return "Item Update" }
+
+// FrameBookendRaw (0x3C -- v3.0.0)
+type FrameBookendRaw struct {
+	CmdByte     uint8  `slp-offset:"0x00" slp-ver:"0.1.0"`
+	FrameNumber int32  `slp-offset:"0x01" slp-ver:"0.1.0"`
+	Seed        uint32 `slp-offset:"0x05" slp-ver:"0.1.0"`
+}
+
+func (FrameBookendRaw) GetCommandByte() byte { return FrameBookendByte }
+
+func (FrameBookendRaw) GetEventName() string { return "Frame Bookend" }
+
+// GeckoListRaw (0x3D -- v3.3.0)
+type GeckoListRaw struct{}
+
+func (GeckoListRaw) GetCommandByte() byte { return GeckoListByte }
+
+func (GeckoListRaw) GetEventName() string { return "Gecko List" }
+
+// MessageSplitRaw (0x10 -- v3.3.0)
+type MessageSplitRaw struct{}
+
+func (MessageSplitRaw) GetCommandByte() byte { return MessageSplitterByte }
+
+func (MessageSplitRaw) GetEventName() string { return "Message Split" }
+
+// FountainPlatformRaw (0x3F -- v3.18.0)
+type FountainPlatformRaw struct {
+	CmdByte     uint8   `slp-offset:"0x00" slp-ver:"3.18.0"`
+	FrameNumber int32   `slp-offset:"0x01" slp-ver:"3.18.0"`
+	Platform    uint8   `slp-offset:"0x05" slp-ver:"3.18.0"`
+	Height      float32 `slp-offset:"0x06" slp-ver:"3.18.0"`
+}
+
+func (FountainPlatformRaw) GetCommandByte() byte {
+	return FountainPlatformsByte
+}
+
+func (FountainPlatformRaw) GetEventName() string {
+	return "Fountain Platform"
+}
+
+// WhispyBlowDirectionRaw (0x40 -- v3.18.0)
+type WhispyBlowDirectionRaw struct {
+	CmdByte     uint8 `slp-offset:"0x00" slp-ver:"3.18.0"`
+	FrameNumber int32 `slp-offset:"0x01" slp-ver:"3.18.0"`
+	Direction   uint8 `slp-offset:"0x05" slp-ver:"3.18.0"`
+}
+
+func (WhispyBlowDirectionRaw) GetCommandByte() byte { return WhispyBlowDirByte }
+
+func (WhispyBlowDirectionRaw) GetEventName() string { return "Whispy Blow Direction" }
+
+// PokemonTransformRaw (0x41 -- v3.18.0)
+type PokemonTransformRaw struct {
+	CmdByte        uint8  `slp-offset:"0x00" slp-ver:"3.18.0"`
+	FrameNumber    int32  `slp-offset:"0x01" slp-ver:"3.18.0"`
+	TransformEvent uint16 `slp-offset:"0x05" slp-ver:"3.18.0"`
+	TransformType  uint16 `slp-offset:"0x07" slp-ver:"3.18.0"`
+}
+
+func (PokemonTransformRaw) GetCommandByte() byte {
+	return StadiumTransformByte
+}
+
+func (PokemonTransformRaw) GetEventName() string {
+	return "Stadium Transform"
 }

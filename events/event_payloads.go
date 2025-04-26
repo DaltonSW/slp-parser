@@ -17,8 +17,12 @@ type EventPayloads struct {
 	Mappings map[byte]uint16
 }
 
-func (p EventPayloads) GetByte() byte {
+func (p EventPayloads) GetCommandByte() byte {
 	return EventPayloadsByte
+}
+
+func (p EventPayloads) GetName() string {
+	return "Event Payloads"
 }
 
 func (p EventPayloads) String() string {

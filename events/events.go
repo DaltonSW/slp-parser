@@ -22,37 +22,56 @@ type Event interface {
 	String() string
 }
 
+type EventRaw interface {
+	GetCommandByte() byte
+	GetEventName() string
+}
+
 // ParseNextEvent will pass the given payload off to the appropriate event parser based on given commandByte
-func ParseNextEvent(commandByte byte, payload []byte) Event {
+// func ParseNextEventRaw(commandByte byte, payload []byte) (*EventRaw, error) {
+func ParseNextEventRaw(payload []byte) (EventRaw, error) {
+
+	var outEvent EventRaw
+
+	commandByte := payload[0]
 
 	switch commandByte {
 	// case EventPayloadsByte:
+	// 	outEvent = &EventPayloads
 	// 	return ParseEventPayloads(payload)
 	case GameStartByte:
-		return ParseGameStart(payload)
-	// case PreFrameUpdateByte:
-	// 	return ParsePreFrameUpdate(payload)
-	// case PostFrameUpdateByte:
-	// 	return ParsePostFrameUpdate(payload)
-	// case GameEndByte:
-	// 	return ParseGameEnd(payload)
-	// case FrameStartByte:
-	// 	return ParseFrameStart(payload)
-	// case ItemUpdateByte:
-	// 	return ParseItemUpdate(payload)
-	// case FrameBookendByte:
-	// 	return ParseFrameBookend(payload)
-	// case GeckoListByte:
-	// 	return ParseGeckoList(payload)
-	// case FountainPlatformsByte:
-	// 	return ParseFountainPlatform(payload)
-	// case WhispyBlowDirByte:
-	// 	return ParseWhispyBlowDir(payload)
-	// case StadiumTransformByte:
-	// 	return ParseStadiumTransform(payload)
-	// case MessageSplitterByte:
-	// 	return ParseMessageSplitter(payload)
+		outEvent = GameStartRaw{}
+	case PreFrameUpdateByte:
+		outEvent = PreFrameRaw{}
+	case PostFrameUpdateByte:
+		outEvent = PostFrameRaw{}
+	case GameEndByte:
+		outEvent = GameEndRaw{}
+	case FrameStartByte:
+		outEvent = FrameStartRaw{}
+	case ItemUpdateByte:
+		outEvent = ItemUpdateRaw{}
+	case FrameBookendByte:
+		outEvent = FrameBookendRaw{}
+	case GeckoListByte:
+		outEvent = GeckoListRaw{}
+	case FountainPlatformsByte:
+		outEvent = FountainPlatformRaw{}
+	case WhispyBlowDirByte:
+		outEvent = WhispyBlowDirectionRaw{}
+	case StadiumTransformByte:
+		outEvent = PokemonTransformRaw{}
+	case MessageSplitterByte:
+		outEvent = MessageSplitRaw{}
 	default:
-		return nil
+		return nil, nil
 	}
+
+	err := UnpackRawEvent(outEvent, payload)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return outEvent, nil
 }

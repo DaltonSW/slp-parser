@@ -2,6 +2,8 @@ package file
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/charmbracelet/log"
 
 	"go.dalton.dog/slp/events"
@@ -11,20 +13,21 @@ type Raw struct {
 	EventPayloads events.EventPayloads
 
 	Bytes  []byte
-	Events []events.Event
+	Events []events.EventRaw
 }
 
 func (r Raw) String() string {
 	out := "~~ Raw ~~\n"
 	// out = out + fmt.Sprintf("Payloads: %v", r.EventPayloads)
-	out = out + "  Events:\n"
-	for idx, event := range r.Events {
-		out = out + fmt.Sprintf("    %v: %v %v\n", idx+1, event.GetByte(), event)
-	}
+	out = out + "  Events: " + strconv.Itoa(len(r.Events))
+	// out = out + "  Events:\n"
+	// for idx, event := range r.Events {
+	// 	out = out + fmt.Sprintf("    %v: %v %v\n", idx+1, event.GetCommandByte(), event)
+	// }
 	return out
 }
 
-func (r Raw) AddEvent(newEvent events.Event) {
+func (r Raw) AddEvent(newEvent events.EventRaw) {
 	r.Events = append(r.Events, newEvent)
 }
 
@@ -52,10 +55,10 @@ func LoadRaw(stream []byte) (*Raw, error) {
 			return nil, err
 		}
 
-		payload := stream[1 : payloadSize+1]
+		payload := stream[:payloadSize+1]
 		stream = stream[payloadSize+1:]
 
-		event := events.ParseNextEvent(cmdByte, payload)
+		event, err := events.ParseNextEventRaw(payload)
 		if event != nil {
 			raw.Events = append(raw.Events, event)
 		}
