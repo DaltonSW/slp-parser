@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/charmbracelet/log"
-	// "os"
 	"path/filepath"
 
 	"go.dalton.dog/bark"
@@ -11,8 +9,7 @@ import (
 
 func main() {
 	bark.Init(bark.BarkOptions{})
-	bark.SetDebugLevel(false)
-	log.SetLevel(log.DebugLevel)
+	bark.SetDebugLevel(true)
 	// samples, err := os.ReadDir("samples")
 	// if err != nil {
 	// 	log.Fatalf("Unable to read dir 'samples': %v", err)
@@ -34,10 +31,10 @@ func loadEntry(filename string) {
 
 	file, err := file.LoadFile(path)
 	if err != nil {
-		log.Error("Error processing file", "file", filename, "err", err)
+		bark.Errorf("Error processing file (%v): %v", filename, err)
 		return
 	}
 
 	// log.Printf("Success! Raw len: %v -- Metadata len: %v", len(file.Raw.Bytes), len(file.Metadata.Bytes))
-	log.Printf("File %v\n%v\n%v", file.Filepath, file.Metadata, file.Raw)
+	bark.Infof("File %v\n%v\n%v", file.Filepath, file.Metadata, file.Raw)
 }

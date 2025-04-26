@@ -1,7 +1,6 @@
 package file
 
 import (
-	"fmt"
 	"strconv"
 
 	"go.dalton.dog/bark"
@@ -31,12 +30,12 @@ func (r Raw) AddEvent(newEvent events.EventRaw) {
 }
 
 func LoadRaw(stream []byte) (*Raw, error) {
-	bark.Debug(fmt.Sprintf("Starting to load raw bytes. Stream length: %v", len(stream)))
+	bark.Debugf("Starting to load raw bytes. Stream length: %v", len(stream))
 	raw := &Raw{Bytes: stream}
 
 	offset := 0
 	if stream[offset] != events.EventPayloadsByte {
-		return nil, fmt.Errorf("Expected %v as first 'raw' byte but got %v", events.EventPayloadsByte, stream[offset])
+		return nil, bark.NewErrorf("Expected %v as first 'raw' byte but got %v", events.EventPayloadsByte, stream[offset])
 	}
 	offset++
 
@@ -44,7 +43,7 @@ func LoadRaw(stream []byte) (*Raw, error) {
 	numCmds := (payloadSize - 1) / 3
 	raw.EventPayloads = events.ParseEventPayloads(stream[offset+1:offset+payloadSize], numCmds)
 
-	bark.Debug(fmt.Sprintf("Event Payloads Parsed: %v", raw.EventPayloads))
+	bark.Debugf("Event Payloads Parsed: %v", raw.EventPayloads)
 
 	stream = stream[offset+payloadSize:]
 
@@ -55,7 +54,7 @@ func LoadRaw(stream []byte) (*Raw, error) {
 			return nil, err
 		}
 
-		bark.Info(fmt.Sprintf("Loaded payload size of %v for cmdByte %X", payloadSize, cmdByte))
+		bark.Infof("Loaded payload size of %v for cmdByte %X", payloadSize, cmdByte)
 
 		payload := stream[:payloadSize+1]
 		stream = stream[payloadSize+1:]
@@ -65,7 +64,6 @@ func LoadRaw(stream []byte) (*Raw, error) {
 			return nil, err
 		}
 		if event != nil {
-			bark.Info("Appending to raw.Events")
 			raw.Events = append(raw.Events, event)
 		}
 	}
