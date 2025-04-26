@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/hashicorp/go-version"
 )
 
-func UnpackRawEvent(raw EventRaw, payload []byte) error {
+func UnpackRawEvent(raw EventRaw, payload []byte, fileVersion *version.Version) error {
+
 	// Verify that the payload's first byte matches the given event's Command Byte
 	cmdByte := payload[0]
 	if cmdByte != raw.GetCommandByte() {
@@ -26,13 +29,27 @@ func UnpackRawEvent(raw EventRaw, payload []byte) error {
 	for i := range structType.NumField() {
 		field := structType.Field(i)
 
+		fieldVerStr := field.Tag.Get("slp-ver")
+		if fieldVerStr == "" {
+			return fmt.Errorf("Found field without slp-ver tag: %v", field)
+		}
+
+		fieldVer, err := version.NewVersion(fieldVerStr)
+		if err != nil {
+			continue
+		}
+
+		if fileVersion.LessThan(fieldVer) {
+			continue
+		}
+
 		offsetHex := field.Tag.Get("slp-offset")
 		if offsetHex == "" {
 			return fmt.Errorf("Found field without slp-offset tag: %v", field)
 		}
 
 		var offset int
-		_, err := fmt.Sscanf(offsetHex, "0x%x", &offset)
+		_, err = fmt.Sscanf(offsetHex, "0x%x", &offset)
 		if err != nil {
 			return fmt.Errorf("Invalid offset tag attempted to parse")
 		}

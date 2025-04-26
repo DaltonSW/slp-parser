@@ -1,6 +1,10 @@
 package events
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hashicorp/go-version"
+)
 
 // Command Bytes
 const (
@@ -31,7 +35,7 @@ type EventRaw interface {
 
 // ParseNextEvent will pass the given payload off to the appropriate event parser based on given commandByte
 // func ParseNextEventRaw(commandByte byte, payload []byte) (*EventRaw, error) {
-func ParseNextEventRaw(payload []byte) (EventRaw, error) {
+func ParseNextEventRaw(payload []byte, version *version.Version) (EventRaw, error) {
 	var outEvent EventRaw
 
 	commandByte := payload[0]
@@ -67,7 +71,7 @@ func ParseNextEventRaw(payload []byte) (EventRaw, error) {
 		return nil, fmt.Errorf("Tried to parse event with unsupported cmdByte: %b", commandByte)
 	}
 
-	err := UnpackRawEvent(outEvent, payload)
+	err := UnpackRawEvent(outEvent, payload, version)
 
 	if err != nil {
 		return nil, err

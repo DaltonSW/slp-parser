@@ -3,6 +3,7 @@ module go.dalton.dog/slp
 go 1.24.1
 
 require (
+	github.com/hashicorp/go-version v1.7.0
 	github.com/jmank88/ubjson v1.3.1
 	go.dalton.dog/bark v1.0.3
 )
