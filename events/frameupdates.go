@@ -8,12 +8,6 @@ type FrameStart struct {
 	SceneFrameCount uint32 // Scene frame counter. Starts at 0, and counts up even if the game is paused
 }
 
-func ParseFrameStart(payload []byte) FrameStart {
-	outEvent := FrameStart{}
-
-	return outEvent
-}
-
 // PreFrameUpdate will occur exactly once per frame per character (ICs are 2 characters).
 // Contains the information required to reconstruct a replay. Information is collected
 // right BEFORE controller input processing takes place.

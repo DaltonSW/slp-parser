@@ -23,11 +23,9 @@ const (
 	MessageSplitterByte   = 0x10
 )
 
-type Event interface {
-	GetByte() byte
-	String() string
-}
-
+// EventRaw represents a raw-parsed event from an slp file.
+// Each struct is 1:1 mapped to an event on the Slippi spec.
+// Spec here: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#game-start
 type EventRaw interface {
 	GetCommandByte() byte
 	GetEventName() string
@@ -64,7 +62,7 @@ func ParseNextEventRaw(payload []byte, version *version.Version) (EventRaw, erro
 	case WhispyBlowDirByte:
 		outEvent = &WhispyBlowDirectionRaw{}
 	case StadiumTransformByte:
-		outEvent = &PokemonTransformRaw{}
+		outEvent = &StadiumTransformRaw{}
 	case MessageSplitterByte:
 		outEvent = &MessageSplitRaw{}
 	default:

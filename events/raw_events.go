@@ -10,14 +10,16 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+// UnpackRawEvent will take in a pointer to a RawEvent struct and a payload to unpack into it.
+// The parsing is facilitated by reflection based on tags placed on the struct's properties.
 func UnpackRawEvent(raw EventRaw, payload []byte, fileVersion *version.Version) error {
 
 	// Verify that the payload's first byte matches the given event's Command Byte
-	cmdByte := payload[0]
-	if cmdByte != raw.GetCommandByte() {
+	if payload[0] != raw.GetCommandByte() {
 		return errors.New("Mismatched command byte")
 	}
 
+	// Verify that "raw" is a pointer to a struct
 	rawVal := reflect.ValueOf(raw)
 	if rawVal.Kind() != reflect.Pointer || rawVal.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("Expected pointer to EventRaw implementing struct, got %T instead", raw)
@@ -34,39 +36,42 @@ func UnpackRawEvent(raw EventRaw, payload []byte, fileVersion *version.Version) 
 			return fmt.Errorf("Found field without slp-ver tag: %v", field)
 		}
 
+		// Skip trying to load any properties added in a later version of the slp file generator
 		fieldVer, err := version.NewVersion(fieldVerStr)
-		if err != nil {
+		if err != nil || fileVersion.LessThan(fieldVer) {
 			continue
 		}
 
-		if fileVersion.LessThan(fieldVer) {
-			continue
-		}
-
+		// Grab the byte offset from the property tag. Every EventRaw should exclusively have tag'd properties
 		offsetHex := field.Tag.Get("slp-offset")
 		if offsetHex == "" {
 			return fmt.Errorf("Found field without slp-offset tag: %v", field)
 		}
 
+		// Parse the offset from hex to binary
 		var offset int
 		_, err = fmt.Sscanf(offsetHex, "0x%x", &offset)
 		if err != nil {
 			return fmt.Errorf("Invalid offset tag attempted to parse")
 		}
 
+		// Grab the size in bytes of the property to unpack into
 		value := structVal.Field(i)
 		size := binary.Size(value.Interface())
 		if size < 0 {
 			return fmt.Errorf("Unsupported size for field %s", field.Name)
 		}
 
+		// Verify that we won't exceed the payload bounds when trying to access it
 		if offset+size > len(payload) {
 			return fmt.Errorf("Payload too short for field %s with offset 0x%x", field.Name, offset)
 		}
 
+		// Slice off the bytes for this property and create a byte Reader for it
 		fieldBytes := payload[offset : offset+size]
 		reader := bytes.NewReader(fieldBytes)
 
+		// Read the value at the offset into the property
 		if err := binary.Read(reader, binary.BigEndian, value.Addr().Interface()); err != nil {
 			return fmt.Errorf("Binary read failed for field %s: %v", field.Name, err)
 		}
@@ -76,13 +81,16 @@ func UnpackRawEvent(raw EventRaw, payload []byte, fileVersion *version.Version) 
 	return nil
 }
 
-// GameStartRaw (0x36 -- v0.1.0)
+// GameStartRaw
+// Command Byte: 0x36
+// Added In: v0.1.0
 type GameStartRaw struct {
 	CmdByte       uint8     `slp-offset:"0x00" slp-ver:"0.1.0"`
 	SlippiVersion [4]uint8  `slp-offset:"0x01" slp-ver:"0.1.0"`
 	GameInfoBlock [312]byte `slp-offset:"0x05" slp-ver:"0.1.0"`
 	RandomSeed    uint32    `slp-offset:"0x13D" slp-ver:"0.1.0"`
 
+	// UCF Stuff
 	PortOneDashback     uint32 `slp-offset:"0x141" slp-ver:"1.0.0"`
 	PortOneShieldDrop   uint32 `slp-offset:"0x145" slp-ver:"1.0.0"`
 	PortTwoDashback     uint32 `slp-offset:"0x149" slp-ver:"1.0.0"`
@@ -92,26 +100,41 @@ type GameStartRaw struct {
 	PortFourDashback    uint32 `slp-offset:"0x159" slp-ver:"1.0.0"`
 	PortFourShieldDrop  uint32 `slp-offset:"0x15D" slp-ver:"1.0.0"`
 
+	// In-Game Nametag
 	PortOneNametag   [16]byte `slp-offset:"0x161" slp-ver:"1.3.0"`
 	PortTwoNametag   [16]byte `slp-offset:"0x171" slp-ver:"1.3.0"`
 	PortThreeNametag [16]byte `slp-offset:"0x181" slp-ver:"1.3.0"`
 	PortFourNametag  [16]byte `slp-offset:"0x191" slp-ver:"1.3.0"`
 
+	// Game Info
 	IsPAL      bool  `slp-offset:"0x1A1" slp-ver:"1.5.0"`
 	FrozenPS   bool  `slp-offset:"0x1A2" slp-ver:"2.0.0"`
 	MinorScene uint8 `slp-offset:"0x1A3" slp-ver:"3.7.0"`
 	MajorScene uint8 `slp-offset:"0x1A4" slp-ver:"3.7.0"`
 
-	// Next chunk of port-specific stuff
 	// Display Name
 	//	(Shift JIS string @ 0x1A5+0x1F*i)
 	//	"Max 15 chars + null terminator"
+	PortOneDisplayName   [16]byte `slp-offset:"0x1A5" slp-ver:"3.9.0"`
+	PortTwoDisplayName   [16]byte `slp-offset:"0x1C4" slp-ver:"3.9.0"`
+	PortThreeDisplayName [16]byte `slp-offset:"0x1E3" slp-ver:"3.9.0"`
+	PortFourDisplayName  [16]byte `slp-offset:"0x202" slp-ver:"3.9.0"`
+
 	// Connect Code
 	//	(Shift JIS string @ 0x221+0xA*i)
 	//	"Max 7 1-byte chars + 2-byte '#' + null terminator"
+	PortOneConnectCode   [10]byte `slp-offset:"0x221" slp-ver:"3.9.0"`
+	PortTwoConnectCode   [10]byte `slp-offset:"0x22B" slp-ver:"3.9.0"`
+	PortThreeConnectCode [10]byte `slp-offset:"0x235" slp-ver:"3.9.0"`
+	PortFourConnectCode  [10]byte `slp-offset:"0x23F" slp-ver:"3.9.0"`
+
 	// Slippi UID
 	//	(string @ 0x249+0x1D*i)
 	//	"Max 28 chars + null terminator"
+	PortOneSlippiUID   [29]byte `slp-offset:"0x249" slp-ver:"3.11.0"`
+	PortTwoSlippiUID   [29]byte `slp-offset:"0x266" slp-ver:"3.11.0"`
+	PortThreeSlippiUID [29]byte `slp-offset:"0x283" slp-ver:"3.11.0"`
+	PortFourSlippiUID  [29]byte `slp-offset:"0x2A0" slp-ver:"3.11.0"`
 
 	LanguageOption uint8    `slp-offset:"0x2BD" slp-ver:"3.12.0"`
 	MatchID        [51]byte `slp-offset:"0x2BE" slp-ver:"3.14.0"`
@@ -123,7 +146,9 @@ func (GameStartRaw) GetCommandByte() byte { return GameStartByte }
 
 func (GameStartRaw) GetEventName() string { return "Game Start" }
 
-// PreFrameRaw (0x37 -- v0.1.0)
+// PreFrameRaw contains information about the player's input information pre-processing
+// Command Byte: 0x37
+// Added In: v0.1.0
 type PreFrameRaw struct {
 	CmdByte          uint8   `slp-offset:"0x00" slp-ver:"0.1.0"`
 	Frame            int32   `slp-offset:"0x01" slp-ver:"0.1.0"`
@@ -154,7 +179,9 @@ func (PreFrameRaw) GetCommandByte() byte { return PreFrameUpdateByte }
 
 func (PreFrameRaw) GetEventName() string { return "Pre-Frame" }
 
-// PostFrameRaw (0x38 -- v0.1.0)
+// PostFrameRaw
+// Command Byte: 0x38
+// Added In: v0.1.0
 type PostFrameRaw struct {
 	CmdByte                 uint8   `slp-offset:"0x00" slp-ver:"0.1.0"`
 	Frame                   int32   `slp-offset:"0x01" slp-ver:"0.1.0"`
@@ -198,7 +225,9 @@ func (PostFrameRaw) GetCommandByte() byte { return PostFrameUpdateByte }
 
 func (PostFrameRaw) GetEventName() string { return "Post-Frame" }
 
-// GameEndRaw (0x39 -- v0.1.0)
+// GameEndRaw
+// Command Byte: 0x39
+// Added In: v0.1.0
 type GameEndRaw struct {
 	CmdByte          uint8   `slp-offset:"0x00" slp-ver:"0.1.0"`
 	EndMethod        uint8   `slp-offset:"0x01" slp-ver:"0.1.0"`
@@ -210,7 +239,9 @@ func (GameEndRaw) GetCommandByte() byte { return GameEndByte }
 
 func (GameEndRaw) GetEventName() string { return "Game End" }
 
-// FrameStartRaw (0x3A -- v2.2.0)
+// FrameStartRaw
+// Command Byte: 0x3A
+// Added In: v2.2.0
 type FrameStartRaw struct {
 	CmdByte           uint8  `slp-offset:"0x00" slp-ver:"2.2.0"`
 	FrameNumber       int32  `slp-offset:"0x01" slp-ver:"2.2.0"`
@@ -222,7 +253,9 @@ func (FrameStartRaw) GetCommandByte() byte { return FrameStartByte }
 
 func (FrameStartRaw) GetEventName() string { return "Frame Start" }
 
-// ItemUpdateRaw (0x3B -- v3.0.0)
+// ItemUpdateRaw
+// Command Byte: 0x3B
+// Added In: v3.0.0
 type ItemUpdateRaw struct {
 	CmdByte         uint8   `slp-offset:"0x00" slp-ver:"3.0.0"`
 	Frame           int32   `slp-offset:"0x01" slp-ver:"3.0.0"`
@@ -248,7 +281,9 @@ func (ItemUpdateRaw) GetCommandByte() byte { return ItemUpdateByte }
 
 func (ItemUpdateRaw) GetEventName() string { return "Item Update" }
 
-// FrameBookendRaw (0x3C -- v3.0.0)
+// FrameBookendRaw
+// Command Byte: 0x3C
+// Added In: v3.0.0
 type FrameBookendRaw struct {
 	CmdByte     uint8  `slp-offset:"0x00" slp-ver:"0.1.0"`
 	FrameNumber int32  `slp-offset:"0x01" slp-ver:"0.1.0"`
@@ -259,21 +294,27 @@ func (FrameBookendRaw) GetCommandByte() byte { return FrameBookendByte }
 
 func (FrameBookendRaw) GetEventName() string { return "Frame Bookend" }
 
-// GeckoListRaw (0x3D -- v3.3.0)
+// GeckoListRaw (Currently Unimplemented)
+// Command Byte: 0x3D
+// Added In: v3.3.0
 type GeckoListRaw struct{}
 
 func (GeckoListRaw) GetCommandByte() byte { return GeckoListByte }
 
 func (GeckoListRaw) GetEventName() string { return "Gecko List" }
 
-// MessageSplitRaw (0x10 -- v3.3.0)
+// MessageSplitRaw
+// Command Byte: 0x10
+// Added In: v3.3.0
 type MessageSplitRaw struct{}
 
 func (MessageSplitRaw) GetCommandByte() byte { return MessageSplitterByte }
 
 func (MessageSplitRaw) GetEventName() string { return "Message Split" }
 
-// FountainPlatformRaw (0x3F -- v3.18.0)
+// FountainPlatformRaw
+// Command Byte: 0x3F
+// Added In: v3.18.0
 type FountainPlatformRaw struct {
 	CmdByte     uint8   `slp-offset:"0x00" slp-ver:"3.18.0"`
 	FrameNumber int32   `slp-offset:"0x01" slp-ver:"3.18.0"`
@@ -281,15 +322,13 @@ type FountainPlatformRaw struct {
 	Height      float32 `slp-offset:"0x06" slp-ver:"3.18.0"`
 }
 
-func (FountainPlatformRaw) GetCommandByte() byte {
-	return FountainPlatformsByte
-}
+func (FountainPlatformRaw) GetCommandByte() byte { return FountainPlatformsByte }
 
-func (FountainPlatformRaw) GetEventName() string {
-	return "Fountain Platform"
-}
+func (FountainPlatformRaw) GetEventName() string { return "Fountain Platform" }
 
-// WhispyBlowDirectionRaw (0x40 -- v3.18.0)
+// WhispyBlowDirectionRaw
+// Command Byte: 0x40
+// Added In: v3.18.0
 type WhispyBlowDirectionRaw struct {
 	CmdByte     uint8 `slp-offset:"0x00" slp-ver:"3.18.0"`
 	FrameNumber int32 `slp-offset:"0x01" slp-ver:"3.18.0"`
@@ -300,18 +339,16 @@ func (WhispyBlowDirectionRaw) GetCommandByte() byte { return WhispyBlowDirByte }
 
 func (WhispyBlowDirectionRaw) GetEventName() string { return "Whispy Blow Direction" }
 
-// PokemonTransformRaw (0x41 -- v3.18.0)
-type PokemonTransformRaw struct {
+// StadiumTransformRaw
+// Command Byte: 0x41
+// Added In: v3.18.0
+type StadiumTransformRaw struct {
 	CmdByte        uint8  `slp-offset:"0x00" slp-ver:"3.18.0"`
 	FrameNumber    int32  `slp-offset:"0x01" slp-ver:"3.18.0"`
 	TransformEvent uint16 `slp-offset:"0x05" slp-ver:"3.18.0"`
 	TransformType  uint16 `slp-offset:"0x07" slp-ver:"3.18.0"`
 }
 
-func (PokemonTransformRaw) GetCommandByte() byte {
-	return StadiumTransformByte
-}
+func (StadiumTransformRaw) GetCommandByte() byte { return StadiumTransformByte }
 
-func (PokemonTransformRaw) GetEventName() string {
-	return "Stadium Transform"
-}
+func (StadiumTransformRaw) GetEventName() string { return "Stadium Transform" }

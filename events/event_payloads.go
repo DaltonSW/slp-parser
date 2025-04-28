@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-// Event:     Event Payloads
-// Cmd Byte:  0x35
-// Added:     v0.1.0
+// EventPayloads
+// Command Byte:  0x35
+// Added In:      v0.1.0
 // EventPayloads will be the first event in the byte stream. It enumerates all possible
 // events and their associated payload length. An event being present in here does not
 // mean that it WILL be encountered, merely that it might show up.
@@ -16,18 +16,12 @@ type EventPayloads struct {
 	Mappings map[byte]uint16
 }
 
-func (p EventPayloads) GetCommandByte() byte {
-	return EventPayloadsByte
-}
+func (p EventPayloads) GetCommandByte() byte { return EventPayloadsByte }
 
-func (p EventPayloads) GetName() string {
-	return "Event Payloads"
-}
+func (p EventPayloads) GetName() string { return "Event Payloads" }
 
-func (p EventPayloads) String() string {
-	return fmt.Sprint(p.Payload)
-}
-
+// GetPayloadLength will return the length of the payload associated with
+// the command byte passed in.
 func (p EventPayloads) GetPayloadLength(cmdByte byte) (uint16, error) {
 	// log.Debugf("Getting payload length for byte %X", cmdByte)
 	val, ok := p.Mappings[cmdByte]
@@ -37,8 +31,9 @@ func (p EventPayloads) GetPayloadLength(cmdByte byte) (uint16, error) {
 	return val, nil
 }
 
+// ParseEventPayloads will take in the EventPayloads event (first event of the file) and
+// parse out the possible commands and their associated payload lengths.
 func ParseEventPayloads(stream []byte, numCmds int) EventPayloads {
-	// log.Debugf("Trying to parse event payloads.\nNum Cmds: %v\nStream: %v\n", numCmds, stream)
 	out := EventPayloads{Mappings: make(map[byte]uint16), Payload: stream}
 	if len(stream) < 1 {
 		return out
