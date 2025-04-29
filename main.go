@@ -1,11 +1,37 @@
-package main
+package slp
 
 import (
 	"path/filepath"
 
 	"go.dalton.dog/bark"
+
 	"go.dalton.dog/slp/file"
+	"go.dalton.dog/slp/game"
 )
+
+// LoadFileFromPath will return a pointer to the file.File struct
+// that was loaded and parsed from the slp file at the given filepath.
+func LoadFileFromPath(filepath string) (*file.File, error) {
+	outFile := &file.File{}
+
+	return outFile, nil
+}
+
+// LoadGameFromPath will return a pointer to the game.Game struct
+// that was loaded and parsed from the slp file at the given filepath.
+func LoadGameFromPath(filepath string) (*game.Game, error) {
+	outGame := &game.Game{}
+
+	return outGame, nil
+}
+
+// LoadGameFromPath will return a pointer to the game.Game struct
+// that was loaded and parsed from the given file.File struct.
+func LoadGameFromFile(file *file.File) (*game.Game, error) {
+	outGame := &game.Game{}
+
+	return outGame, nil
+}
 
 func main() {
 	bark.Init(bark.BarkOptions{})
