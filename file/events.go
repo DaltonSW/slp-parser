@@ -1,4 +1,4 @@
-package events
+package file
 
 import (
 	"bytes"
@@ -9,6 +9,127 @@ import (
 
 	"github.com/hashicorp/go-version"
 )
+
+// Command Bytes
+// First byte of each event, dictates what kind of event it is.
+const (
+	EventPayloadsByte     = 0x35
+	GameStartByte         = 0x36
+	PreFrameUpdateByte    = 0x37
+	PostFrameUpdateByte   = 0x38
+	GameEndByte           = 0x39
+	FrameStartByte        = 0x3A
+	ItemUpdateByte        = 0x3B
+	FrameBookendByte      = 0x3C
+	GeckoListByte         = 0x3D
+	FountainPlatformsByte = 0x3F
+	WhispyBlowDirByte     = 0x40
+	StadiumTransformByte  = 0x41
+	MessageSplitterByte   = 0x10
+)
+
+// EventPayloads
+// Command Byte:  0x35
+// Added In:      v0.1.0
+// EventPayloads will be the first event in the byte stream. It enumerates all possible
+// events and their associated payload length. An event being present in here does not
+// mean that it WILL be encountered, merely that it might show up.
+type EventPayloads struct {
+	Payload  []byte
+	Mappings map[byte]uint16
+}
+
+func (p EventPayloads) GetCommandByte() byte { return EventPayloadsByte }
+
+func (p EventPayloads) GetName() string { return "Event Payloads" }
+
+// GetPayloadLength will return the length of the payload associated with
+// the command byte passed in.
+func (p EventPayloads) GetPayloadLength(cmdByte byte) (uint16, error) {
+	// log.Debugf("Getting payload length for byte %X", cmdByte)
+	val, ok := p.Mappings[cmdByte]
+	if !ok {
+		return 0, fmt.Errorf("Length requested for byte that wasn't present in initial Event Payloads: %v", cmdByte)
+	}
+	return val, nil
+}
+
+// ParseEventPayloads will take in the EventPayloads event (first event of the file) and
+// parse out the possible commands and their associated payload lengths.
+func ParseEventPayloads(stream []byte, numCmds int) EventPayloads {
+	out := EventPayloads{Mappings: make(map[byte]uint16), Payload: stream}
+	if len(stream) < 1 {
+		return out
+	}
+
+	offset := 0
+
+	for range numCmds {
+		command := stream[offset]
+		offset++
+		length := binary.BigEndian.Uint16(stream[offset : offset+2])
+		offset += 2
+
+		out.Mappings[command] = length
+	}
+
+	return out
+}
+
+// EventRaw represents a raw-parsed event from an slp file.
+// Each struct is 1:1 mapped to an event on the Slippi spec.
+// Spec here: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#game-start
+type EventRaw interface {
+	GetCommandByte() byte
+	GetEventName() string
+}
+
+// ParseNextEvent will pass the given payload off to the appropriate event parser based on given commandByte
+// func ParseNextEventRaw(commandByte byte, payload []byte) (*EventRaw, error) {
+func ParseNextEventRaw(payload []byte, version *version.Version) (EventRaw, error) {
+	var outEvent EventRaw
+
+	commandByte := payload[0]
+
+	switch commandByte {
+	case EventPayloadsByte:
+		return nil, nil
+	case GameStartByte:
+		outEvent = &GameStartRaw{}
+	case PreFrameUpdateByte:
+		outEvent = &PreFrameRaw{}
+	case PostFrameUpdateByte:
+		outEvent = &PostFrameRaw{}
+	case GameEndByte:
+		outEvent = &GameEndRaw{}
+	case FrameStartByte:
+		outEvent = &FrameStartRaw{}
+	case ItemUpdateByte:
+		outEvent = &ItemUpdateRaw{}
+	case FrameBookendByte:
+		outEvent = &FrameBookendRaw{}
+	case GeckoListByte:
+		outEvent = &GeckoListRaw{}
+	case FountainPlatformsByte:
+		outEvent = &FountainPlatformRaw{}
+	case WhispyBlowDirByte:
+		outEvent = &WhispyBlowDirectionRaw{}
+	case StadiumTransformByte:
+		outEvent = &StadiumTransformRaw{}
+	case MessageSplitterByte:
+		outEvent = &MessageSplitRaw{}
+	default:
+		return nil, fmt.Errorf("Tried to parse event with unsupported cmdByte: %b", commandByte)
+	}
+
+	err := UnpackRawEvent(outEvent, payload, version)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return outEvent, nil
+}
 
 // UnpackRawEvent will take in a pointer to a RawEvent struct and a payload to unpack into it.
 // The parsing is facilitated by reflection based on tags placed on the struct's properties.

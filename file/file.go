@@ -9,6 +9,8 @@ import (
 	"go.dalton.dog/slp/utils"
 )
 
+// File consists of the actual slp file and how the bytes
+// should be parsed and loaded into Raw and Metadata structs.
 type File struct {
 	Filepath string
 	Raw      *Raw
