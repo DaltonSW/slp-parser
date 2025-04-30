@@ -1,5 +1,7 @@
 package game
 
+import "strings"
+
 type Seed uint32
 
 type ActionState uint16
@@ -25,3 +27,28 @@ type Vector2 struct {
 }
 
 func NewVec(x, y float32) Vector2 { return Vector2{X: x, Y: y} }
+
+type Platform string
+
+func ParsePlatform(plat string) Platform {
+	switch strings.ToLower(plat) {
+	case "dolphin":
+		return Dolphin
+	case "nintendont":
+		return Nintendont
+	case "console":
+		return Console
+	case "network":
+		return Network
+	default:
+		return None
+	}
+}
+
+const (
+	Dolphin    Platform = "Dolphin"
+	Nintendont Platform = "Nintendont"
+	Network    Platform = "Network"
+	Console    Platform = "Console"
+	None       Platform = "None"
+)
