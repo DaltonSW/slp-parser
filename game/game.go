@@ -1,21 +1,27 @@
 package game
 
-import "go.dalton.dog/slp/file"
+import (
+	"go.dalton.dog/slp/file"
+)
 
 type Game struct {
-	Start    GameStart
-	End      GameEnd
-	Metadata Metadata
-	Frames   []Frame
+	Start    *GameStart
+	End      *GameEnd
+	Metadata *Metadata
+	Frames   []*Frame
 }
 
-func NewGameFromFile(file file.File) *Game {
+func NewGameFromFile(file *file.File) (*Game, error) {
 	out := &Game{}
 
-	return out
-}
+	gameMeta, err := ParseGameMetadata(file.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	out.Metadata = gameMeta
 
-type Metadata struct{}
+	return out, nil
+}
 
 // GameStart indicates that a game is starting, and contains the information necessary for initialization.
 // Will ALWAYS occur once, and ALWAYS right after the Event Payloads event

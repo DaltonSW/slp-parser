@@ -46,8 +46,6 @@ func LoadRaw(stream []byte) (*Raw, error) {
 	// Read out that many bytes
 	raw.EventPayloads = ParseEventPayloads(stream[2:1+payloadSize], numCmds)
 
-	bark.Debugf("Event Payloads Parsed: %v", raw.EventPayloads)
-
 	// Chunk off already processed bytes to start iterating over events
 	stream = stream[1+payloadSize:]
 
@@ -61,14 +59,13 @@ func LoadRaw(stream []byte) (*Raw, error) {
 		return nil, err
 	}
 
+	// PERF: This can probably use goroutines to speed processing up
 	for len(stream) > 0 {
 		cmdByte := stream[0]
 		payloadSize, err := raw.EventPayloads.GetPayloadLength(cmdByte)
 		if err != nil {
 			return nil, err
 		}
-
-		bark.Infof("Loaded payload size of %v for cmdByte %X", payloadSize, cmdByte)
 
 		payload := stream[:payloadSize+1]
 		stream = stream[payloadSize+1:]

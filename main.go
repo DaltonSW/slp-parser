@@ -12,25 +12,24 @@ import (
 // LoadFileFromPath will return a pointer to the file.File struct
 // that was loaded and parsed from the slp file at the given filepath.
 func LoadFileFromPath(filepath string) (*file.File, error) {
-	outFile := &file.File{}
-
-	return outFile, nil
+	return file.LoadFile(filepath)
 }
 
 // LoadGameFromPath will return a pointer to the game.Game struct
 // that was loaded and parsed from the slp file at the given filepath.
 func LoadGameFromPath(filepath string) (*game.Game, error) {
-	outGame := &game.Game{}
+	file, err := file.LoadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
 
-	return outGame, nil
+	return game.NewGameFromFile(file)
 }
 
 // LoadGameFromPath will return a pointer to the game.Game struct
 // that was loaded and parsed from the given file.File struct.
 func LoadGameFromFile(file *file.File) (*game.Game, error) {
-	outGame := &game.Game{}
-
-	return outGame, nil
+	return game.NewGameFromFile(file)
 }
 
 func main() {
