@@ -1,18 +1,24 @@
 package file
 
 import (
-	// "bytes"
 	"fmt"
-	// "log"
-	// "strconv"
 
 	"github.com/jmank88/ubjson"
 	"go.dalton.dog/bark"
 )
 
-type Metadata struct {
-	// Bytes []byte
+func LoadMetadata(stream []byte) (*Metadata, error) {
+	bark.Debug("Starting to load metadata bytes")
+	meta := &Metadata{}
 
+	if err := ubjson.Unmarshal(stream, meta); err != nil {
+		return nil, err
+	}
+
+	return meta, nil
+}
+
+type Metadata struct {
 	// StartAt: ISO 8601 formatted string representing the timestamp that the game started at
 	StartAt string `ubjson:"startAt"`
 
@@ -50,7 +56,7 @@ type PlayerMetadata struct {
 	Characters map[string]int32 `ubjson:"characters"`
 
 	// Names: Contains the display name of the player, as well as the connect code if applicable
-	Names PlayerNames `ubjson:"names"`
+	Names map[string]string `ubjson:"names"`
 }
 
 func (pm PlayerMetadata) String() string {
@@ -59,39 +65,4 @@ func (pm PlayerMetadata) String() string {
 	}
 
 	return fmt.Sprintf("%v %v", pm.Names, pm.Characters)
-}
-
-type PlayerCharacter struct {
-	// CharacterID: ID of the character
-	CharacterID string
-
-	// NumFrames: Number of frames the player spent as this character
-	NumFrames int32
-}
-
-func (pc PlayerCharacter) String() string {
-	return fmt.Sprintf("Played %v for %v frames", pc.CharacterID, pc.NumFrames)
-}
-
-type PlayerNames struct {
-	// Netplay: Display name of the player
-	Netplay string `ubjson:"netplay"`
-
-	// Code: Slippi code
-	Code string `ubjson:"code"`
-}
-
-func (pn PlayerNames) String() string {
-	return fmt.Sprintf("%v [%v]", pn.Netplay, pn.Code)
-}
-
-func LoadMetadata(stream []byte) (*Metadata, error) {
-	bark.Debug("Starting to load metadata bytes")
-	meta := &Metadata{}
-
-	if err := ubjson.Unmarshal(stream, meta); err != nil {
-		return nil, err
-	}
-
-	return meta, nil
 }

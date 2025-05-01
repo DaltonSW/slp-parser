@@ -6,14 +6,13 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"go.dalton.dog/bark"
-	"go.dalton.dog/slp/events"
 )
 
 type Raw struct {
-	EventPayloads events.EventPayloads
+	EventPayloads EventPayloads
 
 	Bytes  []byte
-	Events []events.EventRaw
+	Events []EventRaw
 }
 
 func (r Raw) String() string {
@@ -27,7 +26,7 @@ func (r Raw) String() string {
 	return out
 }
 
-func (r Raw) AddEvent(newEvent events.EventRaw) {
+func (r Raw) AddEvent(newEvent EventRaw) {
 	r.Events = append(r.Events, newEvent)
 }
 
@@ -36,8 +35,8 @@ func LoadRaw(stream []byte) (*Raw, error) {
 	raw := &Raw{Bytes: stream}
 
 	// First byte should *always* be the EventPayloadsByte
-	if stream[0] != events.EventPayloadsByte {
-		return nil, bark.NewErrorf("Expected %v as first 'raw' byte but got %v", events.EventPayloadsByte, stream[0])
+	if stream[0] != EventPayloadsByte {
+		return nil, bark.NewErrorf("Expected %v as first 'raw' byte but got %v", EventPayloadsByte, stream[0])
 	}
 
 	// Get payload size and determine number of command:size pairs present
@@ -45,9 +44,7 @@ func LoadRaw(stream []byte) (*Raw, error) {
 	numCmds := (payloadSize - 1) / 3
 
 	// Read out that many bytes
-	raw.EventPayloads = events.ParseEventPayloads(stream[2:1+payloadSize], numCmds)
-
-	bark.Debugf("Event Payloads Parsed: %v", raw.EventPayloads)
+	raw.EventPayloads = ParseEventPayloads(stream[2:1+payloadSize], numCmds)
 
 	// Chunk off already processed bytes to start iterating over events
 	stream = stream[1+payloadSize:]
@@ -62,6 +59,7 @@ func LoadRaw(stream []byte) (*Raw, error) {
 		return nil, err
 	}
 
+	// PERF: This can probably use goroutines to speed processing up
 	for len(stream) > 0 {
 		cmdByte := stream[0]
 		payloadSize, err := raw.EventPayloads.GetPayloadLength(cmdByte)
@@ -69,12 +67,10 @@ func LoadRaw(stream []byte) (*Raw, error) {
 			return nil, err
 		}
 
-		bark.Infof("Loaded payload size of %v for cmdByte %X", payloadSize, cmdByte)
-
 		payload := stream[:payloadSize+1]
 		stream = stream[payloadSize+1:]
 
-		event, err := events.ParseNextEventRaw(payload, version)
+		event, err := ParseNextEventRaw(payload, version)
 		if err != nil {
 			return nil, err
 		}
@@ -91,8 +87,8 @@ func getVersion(stream []byte) (string, error) {
 		return "", bark.NewErrorf("Byte slice passed for version extraction was too short!")
 	}
 
-	if stream[0] != events.GameStartByte {
-		return "", bark.NewErrorf("Expected %v as first 'raw' byte but got %v", events.GameStartByte, stream[0])
+	if stream[0] != GameStartByte {
+		return "", bark.NewErrorf("Expected %v as first 'raw' byte but got %v", GameStartByte, stream[0])
 	}
 
 	return fmt.Sprintf("%d.%d.%d", stream[1], stream[2], stream[3]), nil
